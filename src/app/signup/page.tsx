@@ -1,13 +1,14 @@
 "use client";
 
-import { notifyError, notifyErrorMessage, notifySuccess } from "@/lib/notify";
+import { notifyError } from "@/lib/notify";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AuthAccent, AuthSplitLayout } from "@/components/AuthSplitLayout";
 import { PasswordField } from "@/components/ui/PasswordField";
 import { apiRequest } from "@/lib/api";
+import { isPasswordStrong, passwordChecks } from "@/lib/profileUi";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -19,6 +20,8 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const checks = passwordChecks(password);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -37,8 +40,14 @@ export default function SignupPage() {
       setError("Please enter a valid email address.");
       return;
     }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+    if (!isPasswordStrong(password)) {
+      if (!checks.length) {
+        setError("Password must be at least 8 characters.");
+      } else if (!checks.uppercase) {
+        setError("Password must include at least one uppercase letter.");
+      } else {
+        setError("Password must include at least one number.");
+      }
       return;
     }
     if (password !== confirmPassword) {
@@ -69,40 +78,62 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center px-4 py-10">
-      <div className="login-bg absolute inset-0 bg-cover bg-center bg-no-repeat" />
-      <div className="absolute inset-0 bg-slate-950/40" />
-      <form onSubmit={submit} className="card relative z-10 w-full max-w-md space-y-4 p-7">
-        <Image
-          src="/logo3.png"
-          alt="Emp Track"
-          width={48}
-          height={48}
-          className="h-12 w-12 object-contain"
-        />
-        <h1 className="text-[30px] font-bold">Create account</h1>
-        <p className="text-base text-muted">
-          Ask your admin for the company join code. They must verify you before you can start work.
-        </p>
+    <AuthSplitLayout
+      brandTitle={
+        <>
+          Create your company <AuthAccent>account</AuthAccent>
+        </>
+      }
+      brandSubtitle="Set up your company and get your team started in minutes."
+    >
+      <form onSubmit={submit} className="space-y-4">
+        <div>
+          <h1 className="text-[1.75rem] font-extrabold tracking-tight sm:text-[1.9rem]">
+            Create account
+          </h1>
+          <p className="mt-2 text-sm font-medium leading-relaxed text-muted">
+            Ask your admin for the company join code. They must verify you before you can start
+            work.
+          </p>
+        </div>
+
         {error ? (
           <p className="rounded-xl bg-error-soft px-3 py-2 text-sm font-semibold text-error">
             {error}
           </p>
         ) : null}
+
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1 block text-sm font-bold">First name</span>
-            <input value={firstName} onChange={(e) => setFirstName(e.target.value)} className="field" />
+            <input
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              className="field"
+              autoComplete="given-name"
+            />
           </label>
           <label className="block">
             <span className="mb-1 block text-sm font-bold">Last name</span>
-            <input value={lastName} onChange={(e) => setLastName(e.target.value)} className="field" />
+            <input
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              className="field"
+              autoComplete="family-name"
+            />
           </label>
         </div>
+
         <label className="block">
           <span className="mb-1 block text-sm font-bold">Email</span>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} className="field" autoComplete="username" />
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="field"
+            autoComplete="username"
+          />
         </label>
+
         <label className="block">
           <span className="mb-1 block text-sm font-bold">Company code</span>
           <input
@@ -112,6 +143,7 @@ export default function SignupPage() {
             placeholder="JOINCODE"
           />
         </label>
+
         <PasswordField
           label="Password"
           value={password}
@@ -125,9 +157,17 @@ export default function SignupPage() {
           placeholder="Confirm password"
           autoComplete="new-password"
         />
-        <button disabled={loading} className="btn-primary w-full">
+
+        <ul className="space-y-1 text-sm font-semibold">
+          <Check ok={checks.length} label="At least 8 characters" />
+          <Check ok={checks.uppercase} label="One uppercase letter" />
+          <Check ok={checks.number} label="One number" />
+        </ul>
+
+        <button disabled={loading} className="btn-primary auth-submit mt-1 w-full">
           {loading ? "Creating…" : "Create account"}
         </button>
+
         <p className="text-center text-sm font-bold">
           Already have an account?{" "}
           <Link href="/login" className="text-primary">
@@ -135,6 +175,14 @@ export default function SignupPage() {
           </Link>
         </p>
       </form>
-    </div>
+    </AuthSplitLayout>
+  );
+}
+
+function Check({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <li className={ok ? "text-success" : "text-muted"}>
+      {ok ? "✓" : "○"} {label}
+    </li>
   );
 }

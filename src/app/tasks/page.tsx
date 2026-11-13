@@ -18,7 +18,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { CardSkeleton } from "@/components/ui/Skeleton";
 import { LoadMoreButton } from "@/components/ui/LoadMore";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { displayTaskStatus, formatDurationMs, taskStatusTone } from "@/lib/pmUi";
+import { displayTaskStatus, formatDurationMs, formatTaskStartedAt, taskStatusTone } from "@/lib/pmUi";
 import { TaskDocuments } from "@/components/TaskDocuments";
 import { TaskKindChecklist } from "@/components/TaskKindChecklist";
 import { TaskTimerPanel } from "@/components/employee/TaskTimerPanel";
@@ -749,18 +749,6 @@ function wholeNumberInput(value: string, max: number) {
   const digits = value.replace(/\D/g, "");
   if (!digits) return "";
   return String(Math.min(max, Number(digits)));
-}
-
-function formatTaskStartedAt(value: string | null | undefined) {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
 }
 
 function TaskAssignmentCard({

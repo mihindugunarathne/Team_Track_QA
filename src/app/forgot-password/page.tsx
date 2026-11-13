@@ -1,10 +1,11 @@
 "use client";
 
-import { notifyError, notifyErrorMessage, notifySuccess } from "@/lib/notify";
+import { notifyError } from "@/lib/notify";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AuthAccent, AuthSplitLayout } from "@/components/AuthSplitLayout";
 import { ApiError, apiRequest } from "@/lib/api";
 
 type CompanyChoice = { id: string; name: string };
@@ -64,12 +65,23 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center px-4">
-      <div className="login-bg absolute inset-0 bg-cover bg-center bg-no-repeat" />
-      <div className="absolute inset-0 bg-slate-950/40" />
-      <form onSubmit={submit} className="card relative z-10 w-full max-w-md space-y-4 p-7">
-        <h1 className="text-[30px] font-bold">Forgot password</h1>
-        <p className="text-muted">We’ll send a reset code to your email.</p>
+    <AuthSplitLayout
+      brandTitle={
+        <>
+          Reset access in a few <AuthAccent>steps</AuthAccent>
+        </>
+      }
+      brandSubtitle="We’ll email a reset code so you can choose a new password securely."
+    >
+      <form onSubmit={submit} className="space-y-4">
+        <div>
+          <h1 className="text-[1.75rem] font-extrabold tracking-tight sm:text-[1.9rem]">
+            Forgot password
+          </h1>
+          <p className="mt-2 text-sm font-medium leading-relaxed text-muted">
+            We’ll send a reset code to your email.
+          </p>
+        </div>
         {error ? (
           <p className="rounded-xl bg-error-soft px-3 py-2 text-sm font-semibold text-error">
             {error}
@@ -86,9 +98,11 @@ export default function ForgotPasswordPage() {
                 onClick={() => {
                   setLoading(true);
                   setError("");
-                  void startReset(company.id).catch((err) => {
-                    setError(notifyError(err, "Unable to start reset."));
-                  }).finally(() => setLoading(false));
+                  void startReset(company.id)
+                    .catch((err) => {
+                      setError(notifyError(err, "Unable to start reset."));
+                    })
+                    .finally(() => setLoading(false));
                 }}
               >
                 {company.name}
@@ -107,7 +121,7 @@ export default function ForgotPasswordPage() {
           </label>
         )}
         {!choices ? (
-          <button disabled={loading} className="btn-primary w-full">
+          <button disabled={loading} className="btn-primary auth-submit w-full">
             {loading ? "Sending…" : "Send reset code"}
           </button>
         ) : null}
@@ -115,6 +129,6 @@ export default function ForgotPasswordPage() {
           Back to sign in
         </Link>
       </form>
-    </div>
+    </AuthSplitLayout>
   );
 }

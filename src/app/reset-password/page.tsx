@@ -1,12 +1,14 @@
 "use client";
 
-import { notifyError, notifyErrorMessage, notifySuccess } from "@/lib/notify";
+import { notifyError } from "@/lib/notify";
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { AuthAccent, AuthSplitLayout } from "@/components/AuthSplitLayout";
 import { PasswordField } from "@/components/ui/PasswordField";
 import { apiRequest } from "@/lib/api";
+import { isPasswordStrong, passwordChecks } from "@/lib/profileUi";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -20,10 +22,22 @@ function ResetPasswordForm() {
   const notice = params.get("notice") ?? "Enter the reset code sent to your email.";
   const companyId = params.get("companyId") ?? "";
 
+  const checks = passwordChecks(password);
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (!email.trim() || !code.trim() || password.length < 6) {
-      setError("Email, code, and a 6+ character password are required.");
+    if (!email.trim() || !code.trim()) {
+      setError("Email, code, and a valid password are required.");
+      return;
+    }
+    if (!isPasswordStrong(password)) {
+      if (!checks.length) {
+        setError("Password must be at least 8 characters.");
+      } else if (!checks.uppercase) {
+        setError("Password must include at least one uppercase letter.");
+      } else {
+        setError("Password must include at least one number.");
+      }
       return;
     }
     if (password !== confirmPassword) {
@@ -52,9 +66,15 @@ function ResetPasswordForm() {
   }
 
   return (
-    <form onSubmit={submit} className="card relative z-10 w-full max-w-md space-y-4 p-7">
-      <h1 className="text-[30px] font-bold">Reset password</h1>
-      {notice ? <p className="text-sm font-semibold text-muted">{notice}</p> : null}
+    <form onSubmit={submit} className="space-y-4">
+      <div>
+        <h1 className="text-[1.75rem] font-extrabold tracking-tight sm:text-[1.9rem]">
+          Reset password
+        </h1>
+        {notice ? (
+          <p className="mt-2 text-sm font-medium leading-relaxed text-muted">{notice}</p>
+        ) : null}
+      </div>
       {error ? (
         <p className="rounded-xl bg-error-soft px-3 py-2 text-sm font-semibold text-error">
           {error}
@@ -89,7 +109,7 @@ function ResetPasswordForm() {
         placeholder="Confirm password"
         autoComplete="new-password"
       />
-      <button disabled={loading} className="btn-primary w-full">
+      <button disabled={loading} className="btn-primary auth-submit w-full">
         {loading ? "Saving…" : "Update password"}
       </button>
       <Link href="/login" className="block text-center text-sm font-bold text-primary">
@@ -101,12 +121,17 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="relative flex min-h-screen items-center justify-center px-4">
-      <div className="login-bg absolute inset-0 bg-cover bg-center bg-no-repeat" />
-      <div className="absolute inset-0 bg-slate-950/40" />
-      <Suspense fallback={<p className="relative z-10 font-bold text-white">Loading…</p>}>
+    <AuthSplitLayout
+      brandTitle={
+        <>
+          Choose a stronger <AuthAccent>password</AuthAccent>
+        </>
+      }
+      brandSubtitle="Enter the reset code from your email and set a new password to get back in."
+    >
+      <Suspense fallback={<p className="font-bold text-muted">Loading…</p>}>
         <ResetPasswordForm />
       </Suspense>
-    </div>
+    </AuthSplitLayout>
   );
 }

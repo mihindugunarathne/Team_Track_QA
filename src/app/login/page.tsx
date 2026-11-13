@@ -2,12 +2,19 @@
 
 import { notifyError } from "@/lib/notify";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ApiError, apiRequest } from "@/lib/api";
-import { isAccessRevoked, storeSession, storeToken, toSessionUser } from "@/lib/auth";
+import { AuthAccent, AuthSplitLayout } from "@/components/AuthSplitLayout";
 import { PasswordField } from "@/components/ui/PasswordField";
+import { ApiError, apiRequest } from "@/lib/api";
+import {
+  getStoredSession,
+  getStoredToken,
+  isAccessRevoked,
+  storeSession,
+  storeToken,
+  toSessionUser,
+} from "@/lib/auth";
 import { sessionHome } from "@/lib/permissions";
 
 type AuthUser = {
@@ -51,7 +58,8 @@ function applySession(data: { token: string; user: AuthUser }) {
   }
   storeToken(data.token);
   storeSession(session);
-  window.location.href = sessionHome(session);
+  // Replace so Back does not return to the login screen after signing in.
+  window.location.replace(sessionHome(session));
 }
 
 export default function LoginPage() {
@@ -68,6 +76,13 @@ export default function LoginPage() {
   );
 
   useEffect(() => {
+    if (!getStoredToken()) return;
+    const home = sessionHome(getStoredSession());
+    window.location.replace(home === "/login" ? "/home" : home);
+  }, []);
+
+  useEffect(() => {
+    if (getStoredToken()) return;
     let cancelled = false;
     apiRequest<{ needsSetup: boolean; platformAdminEmail?: string }>(
       "/api/auth/setup-status"
@@ -162,33 +177,44 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center px-4">
-      <div className="login-bg absolute inset-0 bg-cover bg-center bg-no-repeat" />
-      <div className="absolute inset-0 bg-slate-950/40" />
-      <form onSubmit={submit} className="card relative z-10 w-full max-w-md space-y-4 p-7">
-        <Image
-          src="/logo3.png"
-          alt="Emp Track"
-          width={48}
-          height={48}
-          className="h-12 w-12 object-contain"
-        />
-        <p className="text-lg font-bold text-primary">Emp Track</p>
-        <h1 className="text-[30px] font-bold">
-          {needsSetup ? "Create platform admin" : "Sign in"}
-        </h1>
-        <p className="text-base text-muted">
-          {checkingSetup
-            ? "Checking whether the platform admin exists…"
-            : needsSetup
-              ? `Set the password for ${platformAdminEmail}. This is the only platform operator address and is stored in the database.`
-              : "Use your work email. Employees, staff, and admins share this site."}
-        </p>
+    <AuthSplitLayout
+      brandTitle={
+        needsSetup ? (
+          <>
+            Set up your <AuthAccent>platform</AuthAccent>
+          </>
+        ) : (
+          <>
+            Welcome back to your <AuthAccent>workspace</AuthAccent>
+          </>
+        )
+      }
+      brandSubtitle={
+        needsSetup
+          ? "Create the platform admin account and start managing companies."
+          : "Sign in to track work, manage your team, and keep progress moving."
+      }
+    >
+      <form onSubmit={submit} className="space-y-4">
+        <div>
+          <h1 className="text-[1.75rem] font-extrabold tracking-tight sm:text-[1.9rem]">
+            {needsSetup ? "Create platform admin" : "Sign in"}
+          </h1>
+          <p className="mt-2 text-sm font-medium leading-relaxed text-muted">
+            {checkingSetup
+              ? "Checking whether the platform admin exists…"
+              : needsSetup
+                ? `Set the password for ${platformAdminEmail}. This is the only platform operator address and is stored in the database.`
+                : "Use your work email. Employees, staff, and admins share this site."}
+          </p>
+        </div>
+
         {error ? (
           <p className="rounded-xl bg-error-soft px-3 py-2 text-sm font-semibold text-error">
             {error}
           </p>
         ) : null}
+
         {choices ? (
           <div className="space-y-2">
             <p className="text-sm font-bold">Choose your company</p>
@@ -239,7 +265,10 @@ export default function LoginPage() {
                 autoComplete="new-password"
               />
             ) : null}
-            <button disabled={loading || checkingSetup} className="btn-primary w-full">
+            <button
+              disabled={loading || checkingSetup}
+              className="btn-primary auth-submit w-full"
+            >
               {loading
                 ? needsSetup
                   ? "Creating…"
@@ -250,8 +279,9 @@ export default function LoginPage() {
             </button>
           </>
         )}
+
         {!needsSetup ? (
-          <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-bold">
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-sm font-bold">
             <Link href="/forgot-password" className="text-primary">
               Forgot password?
             </Link>
@@ -261,6 +291,6 @@ export default function LoginPage() {
           </div>
         ) : null}
       </form>
-    </div>
+    </AuthSplitLayout>
   );
 }

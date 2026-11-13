@@ -166,7 +166,6 @@ export default function EditTaskPage() {
       setError(notifyErrorMessage(Object.values(nextErrors)[0] ?? "Please fill in the required fields."));
       return;
     }
-    if (!kind) return;
     setSaving(true);
     setError("");
     setFieldErrors({});

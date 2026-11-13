@@ -7,7 +7,7 @@ import { SubTasksPanel } from "@/components/employee/SubTasksPanel";
 import { TaskDocuments } from "@/components/TaskDocuments";
 import { hasKindChecklist, TaskKindChecklist } from "@/components/TaskKindChecklist";
 import { Avatar } from "@/components/ui/Avatar";
-import { displayTaskStatus, taskStatusTone } from "@/lib/pmUi";
+import { displayTaskStatus, formatTaskStartedAt, taskStatusTone } from "@/lib/pmUi";
 import { TaskItem } from "@/lib/types";
 
 export function EmployeeTaskCard({
@@ -37,6 +37,7 @@ export function EmployeeTaskCard({
   const tone = taskStatusTone(task.status);
   const checklist = task.subTasks ?? [];
   const done = checklist.filter((item) => item.completed).length;
+  const startedLabel = formatTaskStartedAt(task.startedAt);
 
   return (
     <article className="rounded-2xl border border-border bg-surface p-4 shadow-[0_1px_2px_rgba(21,32,51,0.05)]">
@@ -70,6 +71,14 @@ export function EmployeeTaskCard({
                     ·
                   </span>
                   <span>{task.trelloTicketId}</span>
+                </>
+              ) : null}
+              {startedLabel ? (
+                <>
+                  <span className="text-border" aria-hidden>
+                    ·
+                  </span>
+                  <span className="font-semibold text-foreground">Started {startedLabel}</span>
                 </>
               ) : null}
               <span

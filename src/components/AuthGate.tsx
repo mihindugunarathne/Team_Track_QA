@@ -73,27 +73,41 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
+function authSplash() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <p className="text-sm font-bold text-primary">Emp Track</p>
+    </div>
+  );
+}
+
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const publicPage = isPublicPath(pathname);
   const pendingPage = pathname === "/pending";
   const [user, setUser] = useState<SessionUser | null>(null);
-  const [ready, setReady] = useState(publicPage);
+  // Public auth pages start unready until we know there is no session — avoids login flash on Back.
+  const [ready, setReady] = useState(false);
+  const [publicAllowed, setPublicAllowed] = useState(false);
 
   const loadSession = useCallback(async () => {
     const token = captureTokenFromUrl() || getStoredToken();
     if (!token) {
       setUser(null);
       if (!publicPage) router.replace("/login");
+      setPublicAllowed(publicPage);
       setReady(publicPage);
       return;
     }
 
     if (publicPage) {
       const stored = getStoredSession();
-      setReady(true);
-      router.replace(sessionHome(stored));
+      const home = sessionHome(stored);
+      // Already signed in — leave auth pages without leaving them in Back history.
+      setPublicAllowed(false);
+      setReady(false);
+      router.replace(home === "/login" ? "/home" : home);
       return;
     }
 
@@ -164,6 +178,20 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return () => window.clearInterval(timer);
   }, [loadSession, publicPage]);
 
+  // Browser Back can restore a cached login page — bounce again without painting it.
+  useEffect(() => {
+    function onPageShow(event: PageTransitionEvent) {
+      if (!event.persisted) return;
+      if (!isPublicPath(window.location.pathname)) return;
+      if (!getStoredToken()) return;
+      const stored = getStoredSession();
+      const home = sessionHome(stored);
+      window.location.replace(home === "/login" ? "/home" : home);
+    }
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
+
   const onPlatform = isPlatformAdmin(user?.role);
   const surfaceMismatch =
     !publicPage &&
@@ -190,16 +218,19 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     };
   }, [loadSession, user]);
 
-  if (publicPage || pendingPage) {
+  if (publicPage) {
+    if (!publicAllowed) {
+      return <AuthContext.Provider value={value}>{authSplash()}</AuthContext.Provider>;
+    }
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  }
+
+  if (pendingPage) {
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
   }
 
   if (!ready || !user || surfaceMismatch) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <p className="text-sm font-bold text-primary">Emp Track</p>
-      </div>
-    );
+    return authSplash();
   }
 
   return (
